@@ -37,7 +37,7 @@ class PizzaOrderDetails extends StatelessWidget {
               child: Column(
                 children: [
                   Expanded(
-                    flex: 15,
+                    flex: 3,
                     child: _PizzaDetails(),
                   ),
                   Expanded(
@@ -62,7 +62,15 @@ class PizzaOrderDetails extends StatelessWidget {
   }
 }
 
-class _PizzaDetails extends StatelessWidget {
+class _PizzaDetails extends StatefulWidget {
+  @override
+  __PizzaDetailsState createState() => __PizzaDetailsState();
+}
+
+class __PizzaDetailsState extends State<_PizzaDetails> {
+  final _listIngredients = <Ingredient>[];
+  bool _focused = false;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -71,23 +79,47 @@ class _PizzaDetails extends StatelessWidget {
           child: DragTarget<Ingredient>(
             onAccept: (ingredient) {
               print('onAccept');
+              setState(() {
+                _focused = false;
+              });
             },
             onWillAccept: (ingredient) {
               print('onWillAccept');
+              setState(() {
+                _focused = true;
+              });
+              for (Ingredient i in _listIngredients) {
+                if (i.compare(ingredient)) {
+                  return false;
+                }
+              }
+              _listIngredients.add(ingredient);
+              return true;
             },
             onLeave: (ingredient) {
               print('onLeave');
+              setState(() {
+                _focused = false;
+              });
             },
             builder: (context, list, rejects) {
-              return Stack(
-                children: [
-                  Image.asset('assets/pizza_order/dish.png'),
-                  Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Image.asset('assets/pizza_order/pizza-1.png'),
+              return LayoutBuilder(builder: (context, constraints) {
+                return Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 400),
+                    width: _focused ? constraints.maxWidth : constraints.maxWidth - 30 ,
+                    child: Stack(
+                      children: [
+                        Image.asset('assets/pizza_order/dish.png'),
+                        Padding(
+                          padding: const EdgeInsets.all(10.0),
+                          child: Image.asset('assets/pizza_order/pizza-1.png'),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              );
+                );
+              });
             },
           ),
         ),
@@ -163,6 +195,8 @@ class _PizzaIngredientItem extends StatelessWidget {
         ),
       ),
     );
-    return Draggable(feedback: child, data: ingredient, child: child);
+    return Center(
+      child: Draggable(feedback: child, data: ingredient, child: child),
+    );
   }
 }
