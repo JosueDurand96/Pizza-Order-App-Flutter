@@ -64,71 +64,207 @@ class PizzaOrderDetails extends StatelessWidget {
 
 class _PizzaDetails extends StatefulWidget {
   @override
-  __PizzaDetailsState createState() => __PizzaDetailsState();
+  _PizzaDetailsState createState() => _PizzaDetailsState();
 }
 
-class __PizzaDetailsState extends State<_PizzaDetails> {
+class _PizzaDetailsState extends State<_PizzaDetails>
+    with SingleTickerProviderStateMixin {
+  AnimationController _animationController;
   final _listIngredients = <Ingredient>[];
-  bool _focused = false;
+  int _total = 15;
+  final _notifierFocus = ValueNotifier(false);
+  List<Animation> _animationList = <Animation>[];
+  BoxConstraints _pizzaConstraints;
+
+  Widget _buildIngredientsWidgets() {
+    List<Widget> elements = [];
+    if (_animationList.isNotEmpty) {
+      for (int i = 0; i < _listIngredients.length; i++) {
+        Ingredient ingredient = _listIngredients[i];
+        final ingredientWidget = Image.asset(ingredient.image,height: 40);
+        for (int j = 0; j < ingredient.positions.length; j++) {
+          final animation = _animationList[j];
+          final position = ingredient.positions[j];
+          final positionX = position.dx;
+          final positionY = position.dy;
+
+          if (i == _listIngredients.length - 1) {
+            double fromX = 0.0, fromY = 0.0;
+
+            if (j < 1) {
+              fromX = -_pizzaConstraints.maxWidth * (1 - animation.value);
+            } else if (j < 2) {
+              fromX = _pizzaConstraints.maxWidth * (1 - animation.value);
+            } else if (j < 4) {
+              fromY = -_pizzaConstraints.maxHeight * (1 - animation.value);
+            } else {
+              fromY = _pizzaConstraints.maxHeight * (1 - animation.value);
+            }
+            if (animation.value > 0) {
+              elements.add(
+                Transform(
+                  transform: Matrix4.identity()
+                    ..translate(
+                      fromX + _pizzaConstraints.maxWidth * positionX,
+                      fromY + _pizzaConstraints.maxHeight * positionY,
+                    ),
+                  child: ingredientWidget,
+                ),
+              );
+            }
+          } else {
+            elements.add(
+              Transform(
+                transform: Matrix4.identity()
+                  ..translate(
+                    _pizzaConstraints.maxWidth * positionX,
+                    _pizzaConstraints.maxHeight * positionY,
+                  ),
+                child: ingredientWidget,
+              ),
+            );
+          }
+        }
+      }
+      return Stack(
+        children: elements,
+      );
+    }
+    return SizedBox.fromSize();
+  }
+
+  void _buildIngredientsAnimation() {
+    _animationList.clear();
+    _animationList.add(CurvedAnimation(
+      curve: Interval(0.0, 0.8, curve: Curves.decelerate),
+      parent: _animationController,
+    ));
+    _animationList.add(CurvedAnimation(
+      curve: Interval(0.2, 0.8, curve: Curves.decelerate),
+      parent: _animationController,
+    ));
+    _animationList.add(CurvedAnimation(
+      curve: Interval(0.4, 1.0, curve: Curves.decelerate),
+      parent: _animationController,
+    ));
+    _animationList.add(CurvedAnimation(
+      curve: Interval(0.1, 0.7, curve: Curves.decelerate),
+      parent: _animationController,
+    ));
+    _animationList.add(CurvedAnimation(
+      curve: Interval(0.3, 1.0, curve: Curves.decelerate),
+      parent: _animationController,
+    ));
+  }
+
+  @override
+  void initState() {
+    _animationController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900));
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        Expanded(
-          child: DragTarget<Ingredient>(
-            onAccept: (ingredient) {
-              print('onAccept');
-              setState(() {
-                _focused = false;
-              });
-            },
-            onWillAccept: (ingredient) {
-              print('onWillAccept');
-              setState(() {
-                _focused = true;
-              });
-              for (Ingredient i in _listIngredients) {
-                if (i.compare(ingredient)) {
-                  return false;
-                }
-              }
-              _listIngredients.add(ingredient);
-              return true;
-            },
-            onLeave: (ingredient) {
-              print('onLeave');
-              setState(() {
-                _focused = false;
-              });
-            },
-            builder: (context, list, rejects) {
-              return LayoutBuilder(builder: (context, constraints) {
-                return Center(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 400),
-                    width: _focused ? constraints.maxWidth : constraints.maxWidth - 30 ,
-                    child: Stack(
-                      children: [
-                        Image.asset('assets/pizza_order/dish.png'),
-                        Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: Image.asset('assets/pizza_order/pizza-1.png'),
-                        ),
-                      ],
+        Column(
+          children: [
+            Expanded(
+              child: DragTarget<Ingredient>(
+                onAccept: (ingredient) {
+                  print('onAccept');
+                  _notifierFocus.value = false;
+                  setState(() {
+                    _listIngredients.add(ingredient);
+                    _total = _total + 1;
+                  });
+                  _buildIngredientsAnimation();
+                  _animationController.forward(from: 0.0);
+                },
+                onWillAccept: (ingredient) {
+                  print('onWillAccept');
+                  _notifierFocus.value = true;
+                  for (Ingredient i in _listIngredients) {
+                    if (i.compare(ingredient)) {
+                      return false;
+                    }
+                  }
+
+                  return true;
+                },
+                onLeave: (ingredient) {
+                  print('onLeave');
+                  _notifierFocus.value = false;
+                },
+                builder: (context, list, rejects) {
+                  return LayoutBuilder(builder: (context, constraints) {
+                    _pizzaConstraints = constraints;
+                    return Center(
+                      child: ValueListenableBuilder<bool>(
+                          valueListenable: _notifierFocus,
+                          builder: (context, focused, _) {
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 400),
+                              width: focused
+                                  ? constraints.maxWidth
+                                  : constraints.maxWidth - 30,
+                              child: Stack(
+                                children: [
+                                  Image.asset('assets/pizza_order/dish.png'),
+                                  Padding(
+                                    padding: const EdgeInsets.all(10.0),
+                                    child: Image.asset(
+                                        'assets/pizza_order/pizza-1.png'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                    );
+                  });
+                },
+              ),
+            ),
+            const SizedBox(height: 5),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: animation.drive(
+                      Tween<Offset>(
+                        begin: Offset(0.0, 0.0),
+                        end: Offset(0.0, animation.value),
+                      ),
                     ),
+                    child: child,
                   ),
                 );
-              });
-            },
-          ),
+              },
+              child: Text(
+                '\$' + _total.toString(),
+                key: UniqueKey(),
+                style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 5),
-        Text(
-          '\$15',
-          style: TextStyle(
-              fontSize: 28, fontWeight: FontWeight.bold, color: Colors.brown),
-        ),
+        AnimatedBuilder(
+            animation: _animationController,
+            builder: (context, _) {
+              return _buildIngredientsWidgets();
+            }),
       ],
     );
   }
@@ -196,7 +332,23 @@ class _PizzaIngredientItem extends StatelessWidget {
       ),
     );
     return Center(
-      child: Draggable(feedback: child, data: ingredient, child: child),
+      child: Draggable(
+        feedback: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                  blurRadius: 10.0,
+                  color: Colors.black26,
+                  offset: Offset(0.0, 5.0),
+                  spreadRadius: 5.0),
+            ],
+          ),
+          child: child,
+        ),
+        data: ingredient,
+        child: child,
+      ),
     );
   }
 }
