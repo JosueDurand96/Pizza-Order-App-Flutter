@@ -54,7 +54,11 @@ class PizzaOrderDetails extends StatelessWidget {
             height: _pizzaCartSize,
             width: _pizzaCartSize,
             left: MediaQuery.of(context).size.width / 2 - _pizzaCartSize / 2,
-            child: _PizzaCartButton(),
+            child: _PizzaCartButton(
+              onTap: () {
+                print('car');
+              },
+            ),
           )
         ],
       ),
@@ -81,7 +85,7 @@ class _PizzaDetailsState extends State<_PizzaDetails>
     if (_animationList.isNotEmpty) {
       for (int i = 0; i < _listIngredients.length; i++) {
         Ingredient ingredient = _listIngredients[i];
-        final ingredientWidget = Image.asset(ingredient.image,height: 40);
+        final ingredientWidget = Image.asset(ingredient.image, height: 40);
         for (int j = 0; j < ingredient.positions.length; j++) {
           final animation = _animationList[j];
           final position = ingredient.positions[j];
@@ -100,15 +104,20 @@ class _PizzaDetailsState extends State<_PizzaDetails>
             } else {
               fromY = _pizzaConstraints.maxHeight * (1 - animation.value);
             }
+            final opacity = animation.value;
+
             if (animation.value > 0) {
               elements.add(
-                Transform(
-                  transform: Matrix4.identity()
-                    ..translate(
-                      fromX + _pizzaConstraints.maxWidth * positionX,
-                      fromY + _pizzaConstraints.maxHeight * positionY,
-                    ),
-                  child: ingredientWidget,
+                Opacity(
+                  opacity: opacity,
+                  child: Transform(
+                    transform: Matrix4.identity()
+                      ..translate(
+                        fromX + _pizzaConstraints.maxWidth * positionX,
+                        fromY + _pizzaConstraints.maxHeight * positionY,
+                      ),
+                    child: ingredientWidget,
+                  ),
                 ),
               );
             }
@@ -160,7 +169,7 @@ class _PizzaDetailsState extends State<_PizzaDetails>
   @override
   void initState() {
     _animationController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
+        vsync: this, duration: const Duration(milliseconds: 700));
     super.initState();
   }
 
@@ -270,24 +279,82 @@ class _PizzaDetailsState extends State<_PizzaDetails>
   }
 }
 
-class _PizzaCartButton extends StatelessWidget {
+class _PizzaCartButton extends StatefulWidget {
+  const _PizzaCartButton({Key key, this.onTap}) : super(key: key);
+  final VoidCallback onTap;
+
+  @override
+  _PizzaCartButtonState createState() => _PizzaCartButtonState();
+}
+
+class _PizzaCartButtonState extends State<_PizzaCartButton>
+    with SingleTickerProviderStateMixin {
+  AnimationController _animationController;
+
+  @override
+  void initState() {
+    _animationController = AnimationController(
+      vsync: this,
+      lowerBound: 0.5,
+      upperBound: 1.0,
+      duration: const Duration(milliseconds: 150),
+      reverseDuration: const Duration(milliseconds: 200),
+    );
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _animateButton() async {
+    await _animationController.forward(from: 0.0);
+    await _animationController.reverse( );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(5),
-        gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.orange.withOpacity(0.5),
-              Colors.orange,
-            ]),
-      ),
-      child: Icon(
-        Icons.shopping_cart_outlined,
-        color: Colors.white,
-        size: 35,
+    return GestureDetector(
+      onTap: () {
+        widget.onTap();
+        _animateButton();
+      },
+      child: AnimatedBuilder(
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(5),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.orange.withOpacity(0.5),
+                Colors.orange,
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 15.0,
+                offset: Offset(0.0, 4.0),
+                spreadRadius: 4.0,
+              )
+            ],
+          ),
+          child: Icon(
+            Icons.shopping_cart_outlined,
+            color: Colors.white,
+            size: 35,
+          ),
+        ),
+        animation: _animationController,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: 1.7-  _animationController.value,
+            child: child,
+          );
+        },
       ),
     );
   }
