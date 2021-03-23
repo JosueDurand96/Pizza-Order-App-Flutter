@@ -311,7 +311,7 @@ class _PizzaCartButtonState extends State<_PizzaCartButton>
 
   Future<void> _animateButton() async {
     await _animationController.forward(from: 0.0);
-    await _animationController.reverse( );
+    await _animationController.reverse();
   }
 
   @override
@@ -351,7 +351,7 @@ class _PizzaCartButtonState extends State<_PizzaCartButton>
         animation: _animationController,
         builder: (context, child) {
           return Transform.scale(
-            scale: 1.7-  _animationController.value,
+            scale: 1.7 - _animationController.value,
             child: child,
           );
         },

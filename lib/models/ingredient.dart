@@ -1,7 +1,8 @@
 import 'package:flutter/cupertino.dart';
 
 class Ingredient {
-  const Ingredient(this.image,this.imageUnit ,this.positions);
+  const Ingredient(this.image, this.imageUnit, this.positions);
+
   final String image;
   final String imageUnit;
   final List<Offset> positions;
