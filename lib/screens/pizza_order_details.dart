@@ -85,7 +85,7 @@ class _PizzaDetailsState extends State<_PizzaDetails>
     if (_animationList.isNotEmpty) {
       for (int i = 0; i < _listIngredients.length; i++) {
         Ingredient ingredient = _listIngredients[i];
-        final ingredientWidget = Image.asset(ingredient.image, height: 40);
+        final ingredientWidget = Image.asset(ingredient.imageUnit, height: 40);
         for (int j = 0; j < ingredient.positions.length; j++) {
           final animation = _animationList[j];
           final position = ingredient.positions[j];
