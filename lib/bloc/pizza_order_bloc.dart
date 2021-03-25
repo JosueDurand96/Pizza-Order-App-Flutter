@@ -17,6 +17,10 @@ class PizzaOrderBLoC with ChangeNotifier {
     notifierDeleteIngredient.value = ingredient;
   }
 
+  void refreshDeletedIngredient(){
+    notifierDeleteIngredient.value = null;
+  }
+
   bool containsIngredients(Ingredient ingredient) {
     for (Ingredient i in listIngredients) {
       if (i.compare(ingredient)) {

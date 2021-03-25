@@ -123,8 +123,9 @@ class _PizzaDetailsState extends State<_PizzaDetails>
 
   Widget _buildIngredientsWidgets(Ingredient deletedIngredient) {
     List<Widget> elements = [];
-    final listIngredients = List.from(PizzaOrderProvider.of(context).listIngredients);
-    if(deletedIngredient != null){
+    final listIngredients =
+        List.from(PizzaOrderProvider.of(context).listIngredients);
+    if (deletedIngredient != null) {
       listIngredients.add(deletedIngredient);
     }
     if (_animationList.isNotEmpty) {
@@ -137,7 +138,7 @@ class _PizzaDetailsState extends State<_PizzaDetails>
           final positionX = position.dx;
           final positionY = position.dy;
 
-          if (i == listIngredients.length - 1) {
+          if (i == listIngredients.length - 1 && _animationController.isAnimating) {
             double fromX = 0.0, fromY = 0.0;
 
             if (j < 1) {
@@ -310,20 +311,19 @@ class _PizzaDetailsState extends State<_PizzaDetails>
                                     );
                                   }),
                             ),
-                             ValueListenableBuilder<Ingredient>(
-                              valueListenable: bloc.notifierDeleteIngredient,
-                              builder: (context, deletedIngredient, _) {
-                                if(deletedIngredient != null){
-                                  _animationController.reverse(from: 1.0);
-                                }
-                                return AnimatedBuilder(
-                                  animation: _animationController,
-                                  builder: (context, _) {
-                                    return _buildIngredientsWidgets(deletedIngredient);
-                                  },
-                                );
-                              }
-                            ),
+                            ValueListenableBuilder<Ingredient>(
+                                valueListenable: bloc.notifierDeleteIngredient,
+                                builder: (context, deletedIngredient, _) {
+                                  _animateDeletedIngredient(deletedIngredient);
+
+                                  return AnimatedBuilder(
+                                    animation: _animationController,
+                                    builder: (context, _) {
+                                      return _buildIngredientsWidgets(
+                                          deletedIngredient);
+                                    },
+                                  );
+                                }),
                           ],
                         ),
                       );
@@ -336,69 +336,77 @@ class _PizzaDetailsState extends State<_PizzaDetails>
         ),
         const SizedBox(height: 5),
         ValueListenableBuilder<int>(
-            valueListenable: bloc.notifierTotal,
-            builder: (context, totalValue, _) {
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: animation.drive(
-                        Tween<Offset>(
-                          begin: Offset(0.0, 0.0),
-                          end: Offset(0.0, animation.value),
-                        ),
+          valueListenable: bloc.notifierTotal,
+          builder: (context, totalValue, _) {
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: animation.drive(
+                      Tween<Offset>(
+                        begin: Offset(0.0, 0.0),
+                        end: Offset(0.0, animation.value),
                       ),
-                      child: child,
                     ),
-                  );
-                },
-                child: Text(
-                  '\$$totalValue',
-                  key: UniqueKey(),
-                  style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.brown),
-                ),
-              );
-            },
+                    child: child,
+                  ),
+                );
+              },
+              child: Text(
+                '\$$totalValue',
+                key: UniqueKey(),
+                style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 15),
         ValueListenableBuilder<_PizzaSizeState>(
-            valueListenable: _notifierPizzaSize,
-            builder: (context, pizzaSize, _) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  PizzaSizeButton(
-                    text: 'S',
-                    onTap: () {
-                      updatePizzaSize(_PizzaSizeValue.s);
-                    },
-                    selected: pizzaSize.value == _PizzaSizeValue.s,
-                  ),
-                  PizzaSizeButton(
-                    text: 'M',
-                    onTap: () {
-                      updatePizzaSize(_PizzaSizeValue.m);
-                    },
-                    selected: pizzaSize.value == _PizzaSizeValue.m,
-                  ),
-                  PizzaSizeButton(
-                    text: 'L',
-                    onTap: () {
-                      updatePizzaSize(_PizzaSizeValue.l);
-                    },
-                    selected: pizzaSize.value == _PizzaSizeValue.l,
-                  ),
-                ],
-              );
-            },
+          valueListenable: _notifierPizzaSize,
+          builder: (context, pizzaSize, _) {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                PizzaSizeButton(
+                  text: 'S',
+                  onTap: () {
+                    updatePizzaSize(_PizzaSizeValue.s);
+                  },
+                  selected: pizzaSize.value == _PizzaSizeValue.s,
+                ),
+                PizzaSizeButton(
+                  text: 'M',
+                  onTap: () {
+                    updatePizzaSize(_PizzaSizeValue.m);
+                  },
+                  selected: pizzaSize.value == _PizzaSizeValue.m,
+                ),
+                PizzaSizeButton(
+                  text: 'L',
+                  onTap: () {
+                    updatePizzaSize(_PizzaSizeValue.l);
+                  },
+                  selected: pizzaSize.value == _PizzaSizeValue.l,
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
+  }
+
+  Future<void> _animateDeletedIngredient(Ingredient deletedIngredient) async {
+    if (deletedIngredient != null) {
+      await _animationController.reverse(from: 1.0);
+      final bloc = PizzaOrderProvider.of(context);
+      bloc.refreshDeletedIngredient();
+    }
   }
 
   void updatePizzaSize(_PizzaSizeValue value) {
