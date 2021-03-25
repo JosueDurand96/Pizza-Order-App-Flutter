@@ -95,13 +95,13 @@ class _PizzaSizeState {
   static double _getFactorBySize(_PizzaSizeValue value) {
     switch (value) {
       case _PizzaSizeValue.s:
-        return 0.7;
-      case _PizzaSizeValue.m:
         return 0.8;
+      case _PizzaSizeValue.m:
+        return 0.9;
       case _PizzaSizeValue.l:
         return 1.0;
     }
-    return 1.0;
+    return 0.9;
   }
 }
 
@@ -121,9 +121,12 @@ class _PizzaDetailsState extends State<_PizzaDetails>
   final _notifierPizzaSize =
       ValueNotifier<_PizzaSizeState>(_PizzaSizeState(_PizzaSizeValue.m));
 
-  Widget _buildIngredientsWidgets() {
+  Widget _buildIngredientsWidgets(Ingredient deletedIngredient) {
     List<Widget> elements = [];
-    final listIngredients = PizzaOrderProvider.of(context).listIngredients;
+    final listIngredients = List.from(PizzaOrderProvider.of(context).listIngredients);
+    if(deletedIngredient != null){
+      listIngredients.add(deletedIngredient);
+    }
     if (_animationList.isNotEmpty) {
       for (int i = 0; i < listIngredients.length; i++) {
         Ingredient ingredient = listIngredients[i];
@@ -307,11 +310,19 @@ class _PizzaDetailsState extends State<_PizzaDetails>
                                     );
                                   }),
                             ),
-                            AnimatedBuilder(
-                              animation: _animationController,
-                              builder: (context, _) {
-                                return _buildIngredientsWidgets();
-                              },
+                             ValueListenableBuilder<Ingredient>(
+                              valueListenable: bloc.notifierDeleteIngredient,
+                              builder: (context, deletedIngredient, _) {
+                                if(deletedIngredient != null){
+                                  _animationController.reverse(from: 1.0);
+                                }
+                                return AnimatedBuilder(
+                                  animation: _animationController,
+                                  builder: (context, _) {
+                                    return _buildIngredientsWidgets(deletedIngredient);
+                                  },
+                                );
+                              }
                             ),
                           ],
                         ),
