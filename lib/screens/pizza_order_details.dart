@@ -1,3 +1,6 @@
+import 'dart:math';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:pizza_order_app/bloc/pizza_order_bloc.dart';
@@ -200,11 +203,9 @@ class _PizzaDetailsState extends State<_PizzaDetails>
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       final bloc = PizzaOrderProvider.of(context);
       bloc.notifierPizzaBoxAnimation.addListener(() {
-
-        if(bloc.notifierPizzaBoxAnimation.value){
+        if (bloc.notifierPizzaBoxAnimation.value) {
           _addPizzaToCart();
         }
-
       });
     });
     super.initState();
@@ -222,6 +223,7 @@ class _PizzaDetailsState extends State<_PizzaDetails>
     final bloc = PizzaOrderProvider.of(context);
     return Column(
       children: [
+        const SizedBox(height: 30),
         Expanded(
           child: DragTarget<Ingredient>(
             onAccept: (ingredient) {
@@ -287,9 +289,10 @@ class _PizzaDetailsState extends State<_PizzaDetails>
                                                         boxShadow: [
                                                           BoxShadow(
                                                             blurRadius: 15.0,
-                                                            color: Colors.black26,
-                                                            offset:
-                                                                Offset(0.0, 5.0),
+                                                            color:
+                                                                Colors.black26,
+                                                            offset: Offset(
+                                                                0.0, 5.0),
                                                             spreadRadius: 5.0,
                                                           ),
                                                         ],
@@ -338,7 +341,7 @@ class _PizzaDetailsState extends State<_PizzaDetails>
             },
           ),
         ),
-        const SizedBox(height: 5),
+        const SizedBox(height: 15),
         ValueListenableBuilder<int>(
           valueListenable: bloc.notifierTotal,
           builder: (context, totalValue, _) {
@@ -434,7 +437,7 @@ class _PizzaDetailsState extends State<_PizzaDetails>
       _overlayEntry = OverlayEntry(builder: (context) {
         return PizzaOrderAnimation(
           metaData: metaData,
-          onComplete: (){
+          onComplete: () {
             _overlayEntry.remove();
             _overlayEntry = null;
             bloc.reset();
@@ -459,11 +462,41 @@ class PizzaOrderAnimation extends StatefulWidget {
 class _PizzaOrderAnimationState extends State<PizzaOrderAnimation>
     with SingleTickerProviderStateMixin {
   AnimationController _controller;
+  Animation<double> _pizzaScaleAnimation;
+  Animation<double> _pizzaOpacityAnimation;
+  Animation<double> _boxEnterScaleAnimation;
+  Animation<double> _boxExitScaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this);
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 2500));
+
+    _pizzaScaleAnimation = Tween(begin: 1.0, end: 0.5).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(0.0, 0.2),
+      ),
+    );
+
+    _pizzaOpacityAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(0.2, 0.4),
+    );
+
+    _boxEnterScaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(0.0, 0.2),
+    );
+
+    _boxExitScaleAnimation = Tween(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(0.5, 0.7),
+      ),
+    );
+    _controller.forward(from: 0.0);
   }
 
   @override
@@ -474,22 +507,102 @@ class _PizzaOrderAnimationState extends State<PizzaOrderAnimation>
 
   @override
   Widget build(BuildContext context) {
-    final metadata  = widget.metaData;
+    final metadata = widget.metaData;
     return Positioned(
       top: metadata.position.dy,
       left: metadata.position.dx,
       width: metadata.size.width,
       height: metadata.size.height,
       child: GestureDetector(
-        onTap: (){
-          widget.onComplete();
-        },
-        child: Center(
-          child: Image.memory(
-            widget.metaData.imageBytes,
-          ),
-        ),
-      ),
+          onTap: () {
+            widget.onComplete();
+          },
+          child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, snapshot) {
+                return Stack(
+                  children: [
+                    Opacity(
+                      opacity: 1 - _pizzaOpacityAnimation.value,
+                      child: Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..scale(_pizzaScaleAnimation.value)
+                          ..translate(
+                              0.0, 20 * (1 - _pizzaOpacityAnimation.value)),
+                        child: Image.memory(widget.metaData.imageBytes),
+                      ),
+                    ),
+                    _buildBox(),
+                  ],
+                );
+              })),
     );
   }
+
+  Widget _buildBox() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final boxHeight = constraints.maxHeight / 2.0;
+        final boxWidth = constraints.maxWidth / 2.0;
+        final minAngle = -45.0;
+        final maxAngle = -110;
+        final boxClosingValue = lerpDouble(minAngle, maxAngle, _pizzaOpacityAnimation.value);
+
+        return Opacity(
+          opacity: _boxEnterScaleAnimation.value,
+          child: Transform.scale(
+            scale: _boxEnterScaleAnimation.value,
+            child: Stack(
+              children: [
+                Center(
+                  child: Transform(
+                    alignment: Alignment.topCenter,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.003)
+                      ..rotateX(degreesToRads(minAngle)),
+                    child: Image.asset(
+                      'assets/pizza_order/box_inside.png',
+                      height: boxHeight,
+                      width: boxWidth,
+                    ),
+                  ),
+                ),
+                Center(
+                  child: Transform(
+                    alignment: Alignment.topCenter,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.003)
+                      ..rotateX(degreesToRads(maxAngle)),
+                    child: Image.asset(
+                      'assets/pizza_order/box_inside.png',
+                      height: boxHeight,
+                      width: boxWidth,
+                    ),
+                  ),
+                ),
+                Center(
+                  child: Transform(
+                    alignment: Alignment.topCenter,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.003)
+                      ..rotateX(degreesToRads(minAngle)),
+                    child: Image.asset(
+                      'assets/pizza_order/box_front.png',
+                      height: boxHeight,
+                      width: boxWidth,
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+num degreesToRads(num deg) {
+  return (deg * pi) / 180;
 }
