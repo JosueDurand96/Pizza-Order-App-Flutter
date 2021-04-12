@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:pizza_order_app/bloc/pizza_order_bloc.dart';
 import 'package:pizza_order_app/bloc/pizza_order_provider.dart';
 import 'package:pizza_order_app/models/ingredient.dart';
+import 'package:pizza_order_app/screens/pizza_cart_icon.dart';
 import 'package:pizza_order_app/widgets/pizza_cart_button.dart';
 import 'package:pizza_order_app/widgets/pizza_ingredient.dart';
 import 'package:pizza_order_app/widgets/pizza_size_button.dart';
@@ -35,11 +36,7 @@ class _PizzaOrderDetailsState extends State<PizzaOrderDetails> {
           backgroundColor: Colors.white,
           elevation: 0,
           actions: [
-            IconButton(
-              onPressed: () {},
-              icon: Icon(Icons.shopping_cart_outlined),
-              color: Colors.black,
-            ),
+            PizzaCartIcon(),
           ],
         ),
         body: Stack(
@@ -466,6 +463,7 @@ class _PizzaOrderAnimationState extends State<PizzaOrderAnimation>
   Animation<double> _pizzaOpacityAnimation;
   Animation<double> _boxEnterScaleAnimation;
   Animation<double> _boxExitScaleAnimation;
+  Animation<double> _boxExitToCartAnimation;
 
   @override
   void initState() {
@@ -493,9 +491,21 @@ class _PizzaOrderAnimationState extends State<PizzaOrderAnimation>
     _boxExitScaleAnimation = Tween(begin: 1.0, end: 1.3).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Interval(0.5, 0.7),
+        curve: Interval(0.6, 0.75),
       ),
     );
+
+    _boxExitToCartAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(0.85, 1.0),
+    );
+
+    _controller.addStatusListener((status) {
+      if(status== AnimationStatus.completed){
+        widget.onComplete();
+      }
+    });
+
     _controller.forward(from: 0.0);
   }
 
@@ -520,21 +530,38 @@ class _PizzaOrderAnimationState extends State<PizzaOrderAnimation>
           child: AnimatedBuilder(
               animation: _controller,
               builder: (context, snapshot) {
-                return Stack(
-                  children: [
-                    Opacity(
-                      opacity: 1 - _pizzaOpacityAnimation.value,
-                      child: Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.identity()
-                          ..scale(_pizzaScaleAnimation.value)
-                          ..translate(
-                              0.0, 20 * (1 - _pizzaOpacityAnimation.value)),
-                        child: Image.memory(widget.metaData.imageBytes),
+                final moveToX = _boxExitToCartAnimation.value > 0 ? metadata.position.dx + metadata.size.width / 2 * _boxExitToCartAnimation.value : 0.0;
+                final moveToY = _boxExitToCartAnimation.value > 0 ? -metadata.size.height / 1.5 * _boxExitToCartAnimation.value : 0.0;
+                return Opacity(
+                  opacity: 1 - _boxExitToCartAnimation.value,
+                  child: Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.identity()
+                      ..translate(moveToX, moveToY)
+                      ..rotateZ(_boxExitToCartAnimation.value)
+                      ..scale(_boxExitScaleAnimation.value),
+                    child: Transform.scale(
+                      alignment: Alignment.center,
+                      scale: 1 - _boxExitToCartAnimation.value,
+                      child: Stack(
+                        children: [
+                          _buildBox(),
+                          Opacity(
+                            opacity: 1 - _pizzaOpacityAnimation.value,
+                            child: Transform(
+                              alignment: Alignment.center,
+                              transform: Matrix4.identity()
+                                ..scale(_pizzaScaleAnimation.value)
+                                ..translate(
+                                    0.0, 20 * (1 - _pizzaOpacityAnimation.value)),
+                              child: Image.memory(widget.metaData.imageBytes),
+                            ),
+                          ),
+
+                        ],
                       ),
                     ),
-                    _buildBox(),
-                  ],
+                  ),
                 );
               })),
     );
@@ -547,7 +574,8 @@ class _PizzaOrderAnimationState extends State<PizzaOrderAnimation>
         final boxWidth = constraints.maxWidth / 2.0;
         final minAngle = -45.0;
         final maxAngle = -110;
-        final boxClosingValue = lerpDouble(minAngle, maxAngle, _pizzaOpacityAnimation.value);
+        final boxClosingValue =
+            lerpDouble(minAngle, maxAngle, 1 - _pizzaOpacityAnimation.value);
 
         return Opacity(
           opacity: _boxEnterScaleAnimation.value,
@@ -573,7 +601,7 @@ class _PizzaOrderAnimationState extends State<PizzaOrderAnimation>
                     alignment: Alignment.topCenter,
                     transform: Matrix4.identity()
                       ..setEntry(3, 2, 0.003)
-                      ..rotateX(degreesToRads(maxAngle)),
+                      ..rotateX(degreesToRads(boxClosingValue)),
                     child: Image.asset(
                       'assets/pizza_order/box_inside.png',
                       height: boxHeight,
@@ -581,19 +609,20 @@ class _PizzaOrderAnimationState extends State<PizzaOrderAnimation>
                     ),
                   ),
                 ),
-                Center(
-                  child: Transform(
-                    alignment: Alignment.topCenter,
-                    transform: Matrix4.identity()
-                      ..setEntry(3, 2, 0.003)
-                      ..rotateX(degreesToRads(minAngle)),
-                    child: Image.asset(
-                      'assets/pizza_order/box_front.png',
-                      height: boxHeight,
-                      width: boxWidth,
+                if (boxClosingValue >= -90)
+                  Center(
+                    child: Transform(
+                      alignment: Alignment.topCenter,
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.003)
+                        ..rotateX(degreesToRads(boxClosingValue)),
+                      child: Image.asset(
+                        'assets/pizza_order/pizza_raul_logo.png',
+                        height: boxHeight,
+                        width: boxWidth,
+                      ),
                     ),
-                  ),
-                )
+                  )
               ],
             ),
           ),

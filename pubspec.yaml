@@ -75,6 +75,7 @@ flutter:
      - assets/pizza_order/pizza-10.png
      - assets/pizza_order/potato.png
      - assets/pizza_order/potato_unit.png
+     - assets/pizza_order/pizza_raul_logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.
